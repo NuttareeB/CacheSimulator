@@ -23,19 +23,19 @@ class CacheController {
 
 		std::string inputFile, outputFile;
 
-		CacheInfo ci;
-		
-		Cache cache;
+		std::vector<CacheInfo> ci;
+
+		std::vector<Cache> caches;
 
 		// function to allow read or write access to the cache
-		void cacheAccess(CacheResponse*, bool, unsigned long int);
+		void cacheAccess(CacheInfo, CacheResponse*, bool, unsigned long int);
 		// function that can compute the index and tag matching a specific address
-		AddressInfo getAddressInfo(unsigned long int);
+		AddressInfo getAddressInfo(CacheInfo, unsigned long int);
 		// compute the number of clock cycles used to complete a memory access
-		void updateCycles(CacheResponse*, bool);
+		void updateCycles(CacheInfo, CacheResponse*, bool);
 
 	public:
-		CacheController(CacheInfo, std::string);
+		CacheController(std::vector<CacheInfo>, std::string);
 		void runTracefile();
 };
 

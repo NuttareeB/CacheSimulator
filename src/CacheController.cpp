@@ -13,14 +13,25 @@
 
 using namespace std;
 
-CacheController::CacheController(CacheInfo ci, string tracefile) : cache(ci) {
+CacheController::CacheController(std::vector<CacheInfo> ci, string tracefile) {
 	// store the configuration info
 	this->ci = ci;
 	this->inputFile = tracefile;
 	this->outputFile = this->inputFile + ".out";
-	// compute the other cache parameters
-	this->ci.numByteOffsetBits = log2(ci.blockSize);
-	this->ci.numSetIndexBits = log2(ci.numberSets);
+
+	for(unsigned int i = 0; i < ci.size(); i++) {
+		cout << "inside for: " << ci.size() << endl;
+		// compute the other cache parameters
+		this->ci[i].numByteOffsetBits = log2(ci[i].blockSize);
+		this->ci[i].numSetIndexBits = log2(ci[i].numberSets);
+		
+		cout << "numByteOffsetBits of: " << i << " = " << this->ci[i].numByteOffsetBits << endl;
+		
+		cout << "numSetIndexBits of: " << i << " = " << this->ci[i].numSetIndexBits << endl;
+
+		caches.push_back(Cache(ci[i]));
+	}
+
 	// initialize the counters
 	this->globalCycles = 0;
 	this->globalHits = 0;
@@ -74,6 +85,7 @@ void CacheController::runTracefile() {
 		unsigned long int address;
 		// create a struct to track cache responses
 		CacheResponse response;
+		response.hit = 0;
 
 		// ignore comments
 		if (std::regex_match(line, commentPattern) || std::regex_match(line, instructionPattern)) {
@@ -84,32 +96,54 @@ void CacheController::runTracefile() {
 			istringstream hexStream(match.str(2));
 			hexStream >> std::hex >> address;
 			outfile << match.str(1) << match.str(2) << match.str(3);
-			cache.readCache(this->ci, getAddressInfo(address), &response, NULL, true, false);
-			cacheAccess(&response, false, address);
-			outfile << " " << response.cycles << " L1" << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
+
+			for(unsigned int i = 0; i < ci.size(); i++) {
+				if(!response.hit) {
+					caches[i].readCache(this->ci[i], getAddressInfo(this->ci[i], address), &response, NULL, true, false);
+					cacheAccess(this->ci[i], &response, false, address);
+
+					outfile << " " << response.cycles << " L" << i+1 << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
+				}
+			}
 		} else if (std::regex_match(line, match, storePattern)) {
 			cout << "Found a store op!" << endl;
 			istringstream hexStream(match.str(2));
 			hexStream >> std::hex >> address;
 			outfile << match.str(1) << match.str(2) << match.str(3);
-			cache.readCache(this->ci, getAddressInfo(address), &response, NULL, true, true);
-			cacheAccess(&response, true, address);
-			outfile << " " << response.cycles << " L1" << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
+			for(unsigned int i = 0; i < ci.size(); i++) {
+				if(!response.hit) {
+					caches[i].readCache(this->ci[i], getAddressInfo(this->ci[i], address), &response, NULL, true, true);
+					cacheAccess(this->ci[i], &response, true, address);
+
+					outfile << " " << response.cycles << " L" << i+1 << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
+				}
+			}
 		} else if (std::regex_match(line, match, modifyPattern)) {
 			cout << "Found a modify op!" << endl;
 			istringstream hexStream(match.str(2));
 			hexStream >> std::hex >> address;
 			outfile << match.str(1) << match.str(2) << match.str(3);
 			// first process the read operation
-			cache.readCache(this->ci, getAddressInfo(address), &response, NULL, true, false);
-			cacheAccess(&response, false, address);
-			outfile << " " << response.cycles << " L1" << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "") << endl;
+			for(unsigned int i = 0; i < ci.size(); i++) {
+				if(!response.hit) {
+					caches[i].readCache(this->ci[i], getAddressInfo(this->ci[i], address), &response, NULL, true, false);
+					cacheAccess(this->ci[i], &response, false, address);
+					
+					outfile << " " << response.cycles << " L" << i+1 << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "") << endl;
+				}
+			}
 
 			outfile << match.str(1) << match.str(2) << match.str(3);
 			// now process the write operation
-			cache.readCache(this->ci, getAddressInfo(address), &response, NULL, true, true);
-			cacheAccess(&response, true, address);
-			outfile << " " << response.cycles << " L1" << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
+			response.hit = 0;
+			for(unsigned int i = 0; i < ci.size(); i++) {
+				if(!response.hit) {
+					caches[i].readCache(this->ci[i], getAddressInfo(this->ci[i], address), &response, NULL, true, true);
+					cacheAccess(this->ci[i], &response, true, address);
+
+					outfile << " " << response.cycles << " L" << i+1 << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
+				}
+			}
 
 		} else {
 			throw runtime_error("Encountered unknown line format in tracefile.");
@@ -127,10 +161,10 @@ void CacheController::runTracefile() {
 /*
 	Calculate the block index and tag for a specified address.
 */
-AddressInfo CacheController::getAddressInfo(unsigned long int address) {
+AddressInfo CacheController::getAddressInfo(CacheInfo ci, unsigned long int address) {
 	AddressInfo ai;
-	ai.tag = address >> (this->ci.numByteOffsetBits+this->ci.numSetIndexBits);
-	ai.setIndex = (address >> this->ci.numByteOffsetBits) & ((1 << this->ci.numSetIndexBits)-1);
+	ai.tag = address >> (ci.numByteOffsetBits+ci.numSetIndexBits);
+	ai.setIndex = (address >> ci.numByteOffsetBits) & ((1 << ci.numSetIndexBits)-1);
 	return ai;
 }
 
@@ -138,9 +172,9 @@ AddressInfo CacheController::getAddressInfo(unsigned long int address) {
 	This function allows us to read or write to the cache.
 	The read or write is indicated by isWrite.
 */
-void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigned long int address) {
+void CacheController::cacheAccess(CacheInfo ci, CacheResponse* response, bool isWrite, unsigned long int address) {
 	// determine the index and tag
-	AddressInfo ai = getAddressInfo(address);
+	AddressInfo ai = getAddressInfo(ci, address);
 
 	cout << "\tSet index: " << ai.setIndex << ", tag: " << ai.tag << endl;
 	
@@ -165,7 +199,7 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 
 	cout << "-----------------------------------------" << endl;
 
-	updateCycles(response, isWrite);
+	updateCycles(ci, response, isWrite);
 	return;
 }
 
@@ -173,23 +207,23 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 	Compute the number of cycles used by a particular memory operation.
 	This will depend on the cache write policy.
 */
-void CacheController::updateCycles(CacheResponse* response, bool isWrite) {
+void CacheController::updateCycles(CacheInfo ci, CacheResponse* response, bool isWrite) {
 	// your code should calculate the proper number of cycles
 	response->cycles = 0;
 
 	if(response->hit) {
 		if(isWrite) {
-			response->cycles += this->ci.memoryAccessCycles + this->ci.cacheAccessCycles;
+			response->cycles += ci.memoryAccessCycles + ci.cacheAccessCycles;
 		} else {
-			response->cycles += this->ci.cacheAccessCycles;
+			response->cycles += ci.cacheAccessCycles;
 		}
 	} else {
 		if(isWrite) {
-			response->cycles += (this->ci.memoryAccessCycles + this->ci.cacheAccessCycles) * 2;
+			response->cycles += (ci.memoryAccessCycles + ci.cacheAccessCycles) * 2;
 		}
 
 		if(!isWrite) {
-			response->cycles += this->ci.memoryAccessCycles + this->ci.cacheAccessCycles;
+			response->cycles += ci.memoryAccessCycles + ci.cacheAccessCycles;
 		}
 	}
 

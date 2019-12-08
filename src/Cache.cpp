@@ -13,8 +13,8 @@ Cache::Cache(CacheInfo cacheInfo) {
 
     std::vector<std::vector<Block>> blocks(cacheInfo.numberSets, std::vector<Block> (cacheInfo.associativity, block));
     this->blocks = blocks;
-    
- cout << "tag==" << blocks[0][3].tag << endl;
+
+ cout << "tag==" << blocks[0][2].tag << endl;
 
  cout << "initial size: ==" << blocks.size() << endl;
 
