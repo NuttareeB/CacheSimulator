@@ -99,8 +99,7 @@ void CacheController::runTracefile() {
 
 			for(unsigned int i = 0; i < ci.size(); i++) {
 				if(!response.hit) {
-					caches[i].readCache(this->ci[i], getAddressInfo(this->ci[i], address), &response, NULL, true, false);
-					cacheAccess(this->ci[i], &response, false, address);
+					cacheAccess(this->ci[i], &response, false, address, i);
 
 					outfile << " " << response.cycles << " L" << i+1 << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
 				}
@@ -112,8 +111,7 @@ void CacheController::runTracefile() {
 			outfile << match.str(1) << match.str(2) << match.str(3);
 			for(unsigned int i = 0; i < ci.size(); i++) {
 				if(!response.hit) {
-					caches[i].readCache(this->ci[i], getAddressInfo(this->ci[i], address), &response, NULL, true, true);
-					cacheAccess(this->ci[i], &response, true, address);
+					cacheAccess(this->ci[i], &response, true, address, i);
 
 					outfile << " " << response.cycles << " L" << i+1 << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
 				}
@@ -126,8 +124,7 @@ void CacheController::runTracefile() {
 			// first process the read operation
 			for(unsigned int i = 0; i < ci.size(); i++) {
 				if(!response.hit) {
-					caches[i].readCache(this->ci[i], getAddressInfo(this->ci[i], address), &response, NULL, true, false);
-					cacheAccess(this->ci[i], &response, false, address);
+					cacheAccess(this->ci[i], &response, false, address, i);
 					
 					outfile << " " << response.cycles << " L" << i+1 << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "") << endl;
 				}
@@ -138,8 +135,7 @@ void CacheController::runTracefile() {
 			response.hit = 0;
 			for(unsigned int i = 0; i < ci.size(); i++) {
 				if(!response.hit) {
-					caches[i].readCache(this->ci[i], getAddressInfo(this->ci[i], address), &response, NULL, true, true);
-					cacheAccess(this->ci[i], &response, true, address);
+					cacheAccess(this->ci[i], &response, true, address, i);
 
 					outfile << " " << response.cycles << " L" << i+1 << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
 				}
@@ -172,12 +168,14 @@ AddressInfo CacheController::getAddressInfo(CacheInfo ci, unsigned long int addr
 	This function allows us to read or write to the cache.
 	The read or write is indicated by isWrite.
 */
-void CacheController::cacheAccess(CacheInfo ci, CacheResponse* response, bool isWrite, unsigned long int address) {
+void CacheController::cacheAccess(CacheInfo ci, CacheResponse* response, bool isWrite, unsigned long int address, unsigned int index) {
 	// determine the index and tag
 	AddressInfo ai = getAddressInfo(ci, address);
 
 	cout << "\tSet index: " << ai.setIndex << ", tag: " << ai.tag << endl;
 	
+	caches[index].readCache(ci, ai, response, NULL, true, isWrite);
+
 	// your code needs to update the global counters that track the number of hits, misses, and evictions
 	if (response->hit) {
 		cout << "Address " << std::hex << address << " was a hit." << endl;

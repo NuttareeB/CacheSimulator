@@ -28,7 +28,7 @@ class CacheController {
 		std::vector<Cache> caches;
 
 		// function to allow read or write access to the cache
-		void cacheAccess(CacheInfo, CacheResponse*, bool, unsigned long int);
+		void cacheAccess(CacheInfo, CacheResponse*, bool, unsigned long int, unsigned int);
 		// function that can compute the index and tag matching a specific address
 		AddressInfo getAddressInfo(CacheInfo, unsigned long int);
 		// compute the number of clock cycles used to complete a memory access
