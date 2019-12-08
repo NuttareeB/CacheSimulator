@@ -84,32 +84,32 @@ void CacheController::runTracefile() {
 			istringstream hexStream(match.str(2));
 			hexStream >> std::hex >> address;
 			outfile << match.str(1) << match.str(2) << match.str(3);
-			cache.readCache(this->ci, getAddressInfo(address), &response);
+			cache.readCache(this->ci, getAddressInfo(address), &response, NULL, true, false);
 			cacheAccess(&response, false, address);
-			outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
+			outfile << " " << response.cycles << " L1" << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
 		} else if (std::regex_match(line, match, storePattern)) {
 			cout << "Found a store op!" << endl;
 			istringstream hexStream(match.str(2));
 			hexStream >> std::hex >> address;
 			outfile << match.str(1) << match.str(2) << match.str(3);
-			cache.readCache(this->ci, getAddressInfo(address), &response);
+			cache.readCache(this->ci, getAddressInfo(address), &response, NULL, true, true);
 			cacheAccess(&response, true, address);
-			outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
+			outfile << " " << response.cycles << " L1" << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
 		} else if (std::regex_match(line, match, modifyPattern)) {
 			cout << "Found a modify op!" << endl;
 			istringstream hexStream(match.str(2));
 			hexStream >> std::hex >> address;
 			outfile << match.str(1) << match.str(2) << match.str(3);
 			// first process the read operation
-			cache.readCache(this->ci, getAddressInfo(address), &response);
+			cache.readCache(this->ci, getAddressInfo(address), &response, NULL, true, false);
 			cacheAccess(&response, false, address);
-			outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "") << endl;
+			outfile << " " << response.cycles << " L1" << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "") << endl;
 
 			outfile << match.str(1) << match.str(2) << match.str(3);
 			// now process the write operation
-			cache.readCache(this->ci, getAddressInfo(address), &response);
+			cache.readCache(this->ci, getAddressInfo(address), &response, NULL, true, true);
 			cacheAccess(&response, true, address);
-			outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
+			outfile << " " << response.cycles << " L1" << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
 
 		} else {
 			throw runtime_error("Encountered unknown line format in tracefile.");

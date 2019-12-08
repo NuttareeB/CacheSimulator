@@ -6,18 +6,13 @@
 
 class Cache {
     private:
-        struct Block {
-            unsigned long int tag;
-            unsigned int dirtyBit;
-            unsigned int validBit;
-        };
-
         std::vector<std::vector<Block>> blocks;
         ReplacementPolicy rp;
 	    WritePolicy wp;
     public:
         Cache(CacheInfo);
-        void readCache(CacheInfo, AddressInfo, CacheResponse*);
+        CacheUpdateResponse readCache(CacheInfo, AddressInfo, CacheResponse*, Block*, bool, bool);
+        Block updateCache(CacheInfo, CacheResponse*, Block, Block, bool);
 };
 
 #endif //CACHEH

@@ -43,4 +43,16 @@ struct AddressInfo {
 	unsigned int setIndex;
 };
 
+struct Block {
+	unsigned long int index;
+	unsigned long int tag;
+	unsigned int dirtyBit;
+	unsigned int validBit;
+};
+
+struct CacheUpdateResponse {
+	CacheResponse response;
+	Block evictedBlock;
+};
+
 #endif //CACHESTUFF
