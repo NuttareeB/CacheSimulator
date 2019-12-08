@@ -96,50 +96,105 @@ void CacheController::runTracefile() {
 			istringstream hexStream(match.str(2));
 			hexStream >> std::hex >> address;
 			outfile << match.str(1) << match.str(2) << match.str(3);
-
+			std::string printText;
+			unsigned int totalCycles = 0; 
 			for(unsigned int i = 0; i < ci.size(); i++) {
 				if(!response.hit) {
 					cacheAccess(this->ci[i], &response, false, address, i);
-
-					outfile << " " << response.cycles << " L" << i+1 << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
+					totalCycles += response.cycles;
+					if(i == ci.size()-1 && !response.hit)
+						totalCycles += ci[i].memoryAccessCycles;
+					// outfile << " " << response->cycles << " L" << i+1 << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
+				} else {
+					break;
 				}
+				printText += " L" + to_string(i+1) + (response.hit ? " hit" : " miss") + (response.eviction ? " eviction" : "");
 			}
+			outfile << " " << totalCycles << printText;
 		} else if (std::regex_match(line, match, storePattern)) {
 			cout << "Found a store op!" << endl;
 			istringstream hexStream(match.str(2));
 			hexStream >> std::hex >> address;
 			outfile << match.str(1) << match.str(2) << match.str(3);
+			std::string printText;
+			unsigned int totalCycles = 0; 
+
 			for(unsigned int i = 0; i < ci.size(); i++) {
 				if(!response.hit) {
 					cacheAccess(this->ci[i], &response, true, address, i);
-
-					outfile << " " << response.cycles << " L" << i+1 << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
+					
+					totalCycles += response.cycles;
+					if(i == ci.size()-1){
+						if(!response.hit) {
+							totalCycles += (this->ci[i].memoryAccessCycles * 2);
+						} else {
+							totalCycles += this->ci[i].memoryAccessCycles;
+						}
+					} 
+					// outfile << " " << response.cycles << " L" << i+1 << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
+				} else {
+					// update another cache level
+					cacheAccess(this->ci[i], &response, true, address, i);
+					totalCycles += response.cycles;
+					totalCycles += this->ci[i].memoryAccessCycles;
+					break;
 				}
+				printText += " L" + to_string(i+1) + (response.hit ? " hit" : " miss") + (response.eviction ? " eviction" : "");
 			}
+			outfile << " " << totalCycles << printText;
 		} else if (std::regex_match(line, match, modifyPattern)) {
 			cout << "Found a modify op!" << endl;
 			istringstream hexStream(match.str(2));
 			hexStream >> std::hex >> address;
 			outfile << match.str(1) << match.str(2) << match.str(3);
+			std::string printText;
+			unsigned int totalCycles = 0; 
+
 			// first process the read operation
 			for(unsigned int i = 0; i < ci.size(); i++) {
 				if(!response.hit) {
 					cacheAccess(this->ci[i], &response, false, address, i);
 					
-					outfile << " " << response.cycles << " L" << i+1 << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "") << endl;
+					totalCycles += response.cycles;
+					if(i == ci.size()-1 && !response.hit)
+						totalCycles += ci[i].memoryAccessCycles;
+					// outfile << " " << response.cycles << " L" << i+1 << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "") << endl;
+				} else {
+					break;
 				}
+				printText += " L" + to_string(i+1) + (response.hit ? " hit" : " miss") + (response.eviction ? " eviction" : "");
 			}
+			outfile << " " << totalCycles << printText << endl;
 
 			outfile << match.str(1) << match.str(2) << match.str(3);
 			// now process the write operation
 			response.hit = 0;
+			printText = "";
+			totalCycles = 0; 
 			for(unsigned int i = 0; i < ci.size(); i++) {
 				if(!response.hit) {
 					cacheAccess(this->ci[i], &response, true, address, i);
 
-					outfile << " " << response.cycles << " L" << i+1 << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
+					totalCycles += response.cycles;
+
+					if(i == ci.size()-1){
+						if(!response.hit) {
+							totalCycles += (this->ci[i].memoryAccessCycles * 2);
+						} else {
+							totalCycles += this->ci[i].memoryAccessCycles;
+						}
+					} 
+					// outfile << " " << response.cycles << " L" << i+1 << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
+				} else {
+					// update another cache level
+					cacheAccess(this->ci[i], &response, true, address, i);
+					totalCycles += response.cycles;
+					totalCycles += this->ci[i].memoryAccessCycles;
+					break;
 				}
+				printText += " L" + to_string(i+1) + (response.hit ? " hit" : " miss") + (response.eviction ? " eviction" : "");
 			}
+			outfile << " " << totalCycles << printText;
 
 		} else {
 			throw runtime_error("Encountered unknown line format in tracefile.");
@@ -174,6 +229,7 @@ void CacheController::cacheAccess(CacheInfo ci, CacheResponse* response, bool is
 
 	cout << "\tSet index: " << ai.setIndex << ", tag: " << ai.tag << endl;
 	
+	//read or write data to cache
 	caches[index].readCache(ci, ai, response, NULL, true, isWrite);
 
 	// your code needs to update the global counters that track the number of hits, misses, and evictions
@@ -210,18 +266,26 @@ void CacheController::updateCycles(CacheInfo ci, CacheResponse* response, bool i
 	response->cycles = 0;
 
 	if(response->hit) {
+		// if(isWrite) {
+		// 	response->cycles += ci.memoryAccessCycles + ci.cacheAccessCycles;
+		// } else {
+		// 	response->cycles += ci.cacheAccessCycles;
+		// }
+
+		response->cycles += ci.cacheAccessCycles;
+	} else {
+		// if(isWrite) {
+		// 	response->cycles += (ci.memoryAccessCycles + ci.cacheAccessCycles) * 2;
+		// }
+
+		// if(!isWrite) {
+		// 	response->cycles += ci.memoryAccessCycles + ci.cacheAccessCycles;
+		// }
+
 		if(isWrite) {
-			response->cycles += ci.memoryAccessCycles + ci.cacheAccessCycles;
+			response->cycles += ci.cacheAccessCycles * 2;
 		} else {
 			response->cycles += ci.cacheAccessCycles;
-		}
-	} else {
-		if(isWrite) {
-			response->cycles += (ci.memoryAccessCycles + ci.cacheAccessCycles) * 2;
-		}
-
-		if(!isWrite) {
-			response->cycles += ci.memoryAccessCycles + ci.cacheAccessCycles;
 		}
 	}
 
