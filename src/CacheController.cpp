@@ -136,8 +136,9 @@ void CacheController::runTracefile() {
 					// update another cache level
 					cacheAccess(this->ci[i], &response, true, address, i);
 					totalCycles += response.cycles;
-					totalCycles += this->ci[i].memoryAccessCycles;
-					break;
+					if(i == ci.size()-1){
+						totalCycles += this->ci[i].memoryAccessCycles;
+					}
 				}
 				printText += " L" + to_string(i+1) + (response.hit ? " hit" : " miss") + (response.eviction ? " eviction" : "");
 			}
@@ -189,8 +190,9 @@ void CacheController::runTracefile() {
 					// update another cache level
 					cacheAccess(this->ci[i], &response, true, address, i);
 					totalCycles += response.cycles;
-					totalCycles += this->ci[i].memoryAccessCycles;
-					break;
+					if(i == ci.size()-1){
+						totalCycles += this->ci[i].memoryAccessCycles;
+					}
 				}
 				printText += " L" + to_string(i+1) + (response.hit ? " hit" : " miss") + (response.eviction ? " eviction" : "");
 			}
