@@ -6,31 +6,22 @@
 
 #include "CacheController.h"
 #include "CacheStuff.h"
+#include <stdlib.h>
 #include <iostream>
 #include <fstream>
 #include <regex>
 #include <cmath>
+#include <thread>
 
 using namespace std;
+
+Cache caches[3];
 
 CacheController::CacheController(std::vector<CacheInfo> ci, string tracefile) {
 	// store the configuration info
 	this->ci = ci;
 	this->inputFile = tracefile;
 	this->outputFile = this->inputFile + ".out";
-
-	for(unsigned int i = 0; i < ci.size(); i++) {
-		cout << "inside for: " << ci.size() << endl;
-		// compute the other cache parameters
-		this->ci[i].numByteOffsetBits = log2(ci[i].blockSize);
-		this->ci[i].numSetIndexBits = log2(ci[i].numberSets);
-		
-		cout << "numByteOffsetBits of: " << i << " = " << this->ci[i].numByteOffsetBits << endl;
-		
-		cout << "numSetIndexBits of: " << i << " = " << this->ci[i].numSetIndexBits << endl;
-
-		caches.push_back(Cache(ci[i]));
-	}
 
 	// initialize the counters
 	this->globalCycles = 0;
@@ -40,6 +31,9 @@ CacheController::CacheController(std::vector<CacheInfo> ci, string tracefile) {
 	
 	this->globalReads = 0;
 	this->globalWrites = 0;
+
+	// std::vector<Cache> localcaches(this->ci.size());
+	// this->caches = localcaches;
 
 	// create your cache structure
 	// ...
@@ -57,10 +51,34 @@ CacheController::CacheController(std::vector<CacheInfo> ci, string tracefile) {
 	*/
 }
 
+void initializeCache(int id, CacheInfo ci) {
+	Cache c = Cache(ci);
+	// caches.push_back(c);
+	caches[id] = c;
+}
+
 /*
 	Starts reading the tracefile and processing memory operations.
 */
 void CacheController::runTracefile() {
+	// thread threads[this->ci.size()];
+	for(unsigned int i = 0; i < this->ci.size(); i++) {
+		cout << "inside for: " << this->ci.size() << endl;
+		// compute the other cache parameters
+		this->ci[i].numByteOffsetBits = log2(this->ci[i].blockSize);
+		this->ci[i].numSetIndexBits = log2(this->ci[i].numberSets);
+		
+		cout << "numByteOffsetBits of: " << i << " = " << this->ci[i].numByteOffsetBits << endl;
+		
+		cout << "numSetIndexBits of: " << i << " = " << this->ci[i].numSetIndexBits << endl;
+
+		// threads[i] = thread(initializeCache, i, this->ci[i]);
+	}
+	// for(unsigned int i = 0; i < this->ci.size(); i++) {
+	// 	threads[i].detach();
+	// }
+
+	//caches.push_back(Cache(ci[i]));
 	cout << "Input tracefile: " << inputFile << endl;
 	cout << "Output file name: " << outputFile << endl;
 	
@@ -231,8 +249,15 @@ void CacheController::cacheAccess(CacheInfo ci, CacheResponse* response, bool is
 
 	cout << "\tSet index: " << ai.setIndex << ", tag: " << ai.tag << endl;
 	
+	// bool allSet = false;
+	// for(int i = 0; i < 3; i++){
+	// 	if(caches[i]){
+	// 		sleep
+	// 	}
+	// }
 	//read or write data to cache
 	caches[index].readCache(ci, ai, response, NULL, true, isWrite);
+	// thread t = thread(caches[index].readCache, ci, ai, response, NULL, true, isWrite);
 
 	// your code needs to update the global counters that track the number of hits, misses, and evictions
 	if (response->hit) {

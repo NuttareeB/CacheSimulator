@@ -4,6 +4,8 @@
 
 using namespace std;
 
+Cache::Cache() {
+}
 Cache::Cache(CacheInfo cacheInfo) {
     Block block;
 

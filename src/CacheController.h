@@ -25,7 +25,7 @@ class CacheController {
 
 		std::vector<CacheInfo> ci;
 
-		std::vector<Cache> caches;
+		// std::vector<Cache> caches;
 
 		// function to allow read or write access to the cache
 		void cacheAccess(CacheInfo, CacheResponse*, bool, unsigned long int, unsigned int);
