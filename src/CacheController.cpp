@@ -111,6 +111,7 @@ void CacheController::runTracefile() {
 				printText += " L" + to_string(i+1) + (response.hit ? " hit" : " miss") + (response.eviction ? " eviction" : "");
 			}
 			outfile << " " << totalCycles << printText;
+			this->globalCycles += totalCycles;
 		} else if (std::regex_match(line, match, storePattern)) {
 			cout << "Found a store op!" << endl;
 			istringstream hexStream(match.str(2));
@@ -143,6 +144,7 @@ void CacheController::runTracefile() {
 				printText += " L" + to_string(i+1) + (response.hit ? " hit" : " miss") + (response.eviction ? " eviction" : "");
 			}
 			outfile << " " << totalCycles << printText;
+			this->globalCycles += totalCycles;
 		} else if (std::regex_match(line, match, modifyPattern)) {
 			cout << "Found a modify op!" << endl;
 			istringstream hexStream(match.str(2));
@@ -166,6 +168,7 @@ void CacheController::runTracefile() {
 				printText += " L" + to_string(i+1) + (response.hit ? " hit" : " miss") + (response.eviction ? " eviction" : "");
 			}
 			outfile << " " << totalCycles << printText << endl;
+			this->globalCycles += totalCycles;
 
 			outfile << match.str(1) << match.str(2) << match.str(3);
 			// now process the write operation
@@ -197,7 +200,7 @@ void CacheController::runTracefile() {
 				printText += " L" + to_string(i+1) + (response.hit ? " hit" : " miss") + (response.eviction ? " eviction" : "");
 			}
 			outfile << " " << totalCycles << printText;
-
+			this->globalCycles += totalCycles;
 		} else {
 			throw runtime_error("Encountered unknown line format in tracefile.");
 		}
@@ -232,7 +235,7 @@ void CacheController::cacheAccess(CacheInfo ci, CacheResponse* response, bool is
 	cout << "\tSet index: " << ai.setIndex << ", tag: " << ai.tag << endl;
 	
 	//read or write data to cache
-	caches[index].readCache(ci, ai, response, NULL, true, isWrite);
+	caches[index].accessCache(ci, ai, response, NULL, true, isWrite);
 
 	// your code needs to update the global counters that track the number of hits, misses, and evictions
 	if (response->hit) {
@@ -290,6 +293,4 @@ void CacheController::updateCycles(CacheInfo ci, CacheResponse* response, bool i
 			response->cycles += ci.cacheAccessCycles;
 		}
 	}
-
-	this->globalCycles += response->cycles;
 }

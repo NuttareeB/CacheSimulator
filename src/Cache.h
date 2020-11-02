@@ -11,7 +11,7 @@ class Cache {
 	    WritePolicy wp;
     public:
         Cache(CacheInfo);
-        CacheUpdateResponse readCache(CacheInfo, AddressInfo, CacheResponse*, Block*, bool, bool);
+        CacheUpdateResponse accessCache(CacheInfo, AddressInfo, CacheResponse*, Block*, bool, bool);
         Block updateCache(CacheInfo, CacheResponse*, Block, Block, bool);
 };
 

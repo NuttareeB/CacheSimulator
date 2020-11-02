@@ -13,14 +13,9 @@ Cache::Cache(CacheInfo cacheInfo) {
 
     std::vector<std::vector<Block>> blocks(cacheInfo.numberSets, std::vector<Block> (cacheInfo.associativity, block));
     this->blocks = blocks;
-
- cout << "tag==" << blocks[0][2].tag << endl;
-
- cout << "initial size: ==" << blocks.size() << endl;
-
 };
 
-CacheUpdateResponse Cache::readCache(CacheInfo cacheInfo, AddressInfo ai, CacheResponse* response, Block* evictedBlock, bool isL1Cache, bool isWrite) {
+CacheUpdateResponse Cache::accessCache(CacheInfo cacheInfo, AddressInfo ai, CacheResponse* response, Block* evictedBlock, bool isL1Cache, bool isWrite) {
     CacheUpdateResponse cacheUpdateResponse;
     Block block;
     Block tmpFoundBlock;
@@ -41,15 +36,17 @@ CacheUpdateResponse Cache::readCache(CacheInfo cacheInfo, AddressInfo ai, CacheR
             response->hit = 1;
             response->eviction = 0;
 
-            //if we need to evict the block, keep the found block first to avoid replace to that particular block
+            //if we have the evicted block from the previious cache, keep the found block first to avoid replace to that particular block
             if(evictedBlock) {
-                //update tmp file
+                //update tmp block
                 tmpFoundBlock = this->blocks[block.index][i];
             }
 
-            //move vector to the back and delete from the exiting place to support LRU
-            this->blocks[block.index].push_back(*(this->blocks[block.index].begin() + i));
-            this->blocks[block.index].erase(this->blocks[block.index].begin() + i);
+            if(cacheInfo.rp == ReplacementPolicy::LRU) {
+                //move vector to the back and delete from the exiting place to support LRU
+                this->blocks[block.index].push_back(*(this->blocks[block.index].begin() + i));
+                this->blocks[block.index].erase(this->blocks[block.index].begin() + i);
+            }
         }
     }
 
@@ -94,10 +91,11 @@ Block Cache::updateCache(CacheInfo cacheInfo, CacheResponse* response, Block tmp
         if(this->blocks[block.index][i].validBit == 0) {
             this->blocks[block.index][i] = block;
             
-            //move vector to the back and delete from the exiting place to support LRU
-            this->blocks[block.index].push_back(*(this->blocks[block.index].begin() + i));
-            this->blocks[block.index].erase(this->blocks[block.index].begin() + i);
-
+            if(cacheInfo.rp == ReplacementPolicy::LRU) {
+                //move vector to the back and delete from the exiting place to support LRU
+                this->blocks[block.index].push_back(*(this->blocks[block.index].begin() + i));
+                this->blocks[block.index].erase(this->blocks[block.index].begin() + i);
+            }
             return evictedBlock;
         }
     }
