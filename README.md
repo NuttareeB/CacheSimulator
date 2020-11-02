@@ -1,5 +1,5 @@
 # CacheSimulator
-The infomation is the instruction of the project from Porfessor Justin Goin.
+The information is the instruction of the project from Professor Justin Goin.
 
 ### Ability
 * The simulator is configurable
